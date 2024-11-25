@@ -3,6 +3,10 @@ from tkinter import messagebox
 import tweepy
 import json
 import os
+import tkinter as tk
+import customtkinter as ctk
+import tweepy
+from twitter_gui_lib import TwitterGUI
 
 CONFIG_FILE = "config.json"
 
@@ -26,25 +30,26 @@ def save_credentials(api_key, api_secret_key, access_token, access_token_secret)
 
 # Authenticate with Twitter API
 def authenticate():
-    credentials = load_credentials()
-    if not credentials:
-        messagebox.showinfo("Info", "Please enter your Twitter API credentials.")
-        credentials_window()
-        return None
+    API_KEY = "your_api_key"
+    API_SECRET_KEY = "your_api_secret_key"
+    ACCESS_TOKEN = "your_access_token"
+    ACCESS_TOKEN_SECRET = "your_access_token_secret"
 
-    try:
-        auth = tweepy.OAuth1UserHandler(
-            credentials["api_key"],
-            credentials["api_secret_key"],
-            credentials["access_token"],
-            credentials["access_token_secret"],
-        )
-        api = tweepy.API(auth)
-        api.verify_credentials()  # Verify credentials are valid
-        return api
+    auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET_KEY, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+    api = tweepy.API(auth)
+    return api
     except Exception as e:
         messagebox.showerror("Error", f"Authentication failed: {e}")
         return None
+# Initialize GUI
+ctk.set_appearance_mode("Dark")  # Discord-like dark theme
+root = ctk.CTk()
+root.title("Twitter GUI")
+
+# Authenticate and pass API to TwitterGUI
+api = authenticate()
+twitter_gui = TwitterGUI(root, api)
+
 
 # GUI to collect API credentials
 def credentials_window():
