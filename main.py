@@ -1,52 +1,86 @@
-import tkinter as tk
 import customtkinter as ctk
-import tweepy
-from twitter_gui_lib import TwitterGUI
-from profile_manager import ProfileManager
-from tweet_scheduler import TweetScheduler
-from notification_handler import NotificationHandler
+from twitter_gui import TwitterGUI
+from twitter_backend import TwitterBackend
 
-# Authentication setup
-def authenticate():
-    API_KEY = "your_api_key"
-    API_SECRET_KEY = "your_api_secret_key"
-    ACCESS_TOKEN = "your_access_token"
-    ACCESS_TOKEN_SECRET = "your_access_token_secret"
 
-    auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET_KEY, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
-    api = tweepy.API(auth)
-    return api
+class TwitterLoginGUI:
+    def __init__(self, root):
+        self.root = root
+        self.backend = None
 
-# Callback functions for notifications
-def handle_new_mentions(mentions):
-    for mention in mentions:
-        messagebox.showinfo("New Mention", f"{mention.user.screen_name}: {mention.text}")
+        # Root Window Setup
+        self.root.title("Twitter Login")
+        self.root.geometry("400x500")
 
-def handle_new_dms(dms):
-    for dm in dms:
-        messagebox.showinfo("New DM", f"{dm.message_create['sender_id']}: {dm.message_create['message_data']['text']}")
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
 
-# Initialize GUI
-ctk.set_appearance_mode("Dark")
-root = ctk.CTk()
-root.title("Twitter GUI")
+        # Login UI
+        self.create_login_screen()
 
-# Authenticate and set up components
-api = authenticate()
-twitter_gui = TwitterGUI(root, api)
+    def create_login_screen(self):
+        """Creates the login UI for entering Twitter API credentials."""
+        login_frame = ctk.CTkFrame(self.root, corner_radius=10)
+        login_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-# Add Profile Manager
-profile_manager = ProfileManager(api)
-twitter_gui.create_menu()
-ctk.CTkButton(root, text="Update Profile", command=lambda: profile_manager.open_profile_window(root)).pack()
+        ctk.CTkLabel(
+            login_frame, text="Twitter Login", font=("Arial", 24, "bold"), anchor="center"
+        ).pack(pady=20)
 
-# Add Tweet Scheduler
-scheduler = TweetScheduler(api)
-ctk.CTkButton(root, text="Schedule Tweet", command=lambda: scheduler.open_scheduler_window(root)).pack()
+        # Input Fields
+        self.api_key_entry = self.create_input_field(login_frame, "API Key")
+        self.api_secret_entry = self.create_input_field(login_frame, "API Secret")
+        self.access_token_entry = self.create_input_field(login_frame, "Access Token")
+        self.access_token_secret_entry = self.create_input_field(login_frame, "Access Token Secret")
 
-# Add Notification Handler
-notifications = NotificationHandler(api)
-notifications.start_polling(handle_new_mentions, handle_new_dms)
+        # Login Button
+        ctk.CTkButton(
+            login_frame, text="Login", command=self.handle_login, fg_color="#1DA1F2"
+        ).pack(pady=20)
 
-# Start GUI
-root.mainloop()
+        # Status Label
+        self.status_label = ctk.CTkLabel(login_frame, text="", text_color="red", anchor="center")
+        self.status_label.pack(pady=10)
+
+    def create_input_field(self, parent, placeholder):
+        """Creates a labeled input field."""
+        ctk.CTkLabel(parent, text=placeholder).pack(pady=(10, 0))
+        entry = ctk.CTkEntry(parent, width=300)
+        entry.pack(pady=5)
+        return entry
+
+    def handle_login(self):
+        """Handle login logic and transition to the main application."""
+        # Get API Credentials
+        api_key = self.api_key_entry.get()
+        api_secret = self.api_secret_entry.get()
+        access_token = self.access_token_entry.get()
+        access_token_secret = self.access_token_secret_entry.get()
+
+        # Validate Inputs
+        if not all([api_key, api_secret, access_token, access_token_secret]):
+            self.status_label.configure(text="All fields are required!", text_color="red")
+            return
+
+        try:
+            # Initialize Backend
+            self.backend = TwitterBackend(api_key, api_secret, access_token, access_token_secret)
+            self.status_label.configure(text="Login successful!", text_color="green")
+
+            # Transition to Main GUI
+            self.load_main_gui()
+        except Exception as e:
+            self.status_label.configure(text=f"Login failed: {str(e)}", text_color="red")
+
+    def load_main_gui(self):
+        """Destroys the login screen and loads the main Twitter GUI."""
+        self.root.destroy()
+        main_root = ctk.CTk()
+        TwitterGUI(main_root, self.backend)
+        main_root.mainloop()
+
+
+if __name__ == "__main__":
+    root = ctk.CTk()
+    TwitterLoginGUI(root)
+    root.mainloop()
